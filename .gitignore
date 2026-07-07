@@ -30,3 +30,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment / secrets
+.env
+.env.*
+*.local
+
+# Large survey data & intermediate files
+# (excluded to satisfy remote pre-receive size limits; these are >50MB)
+data/2023/Microdata/RW_LFS2023.csv
+data/2025/Microdata/RW_LFS2025.csv
+temp/
+data/**/*.csv
+data/**/*.dta
+data/**/*.sav
+data/**/*.xlsx
+raw/**/*.dta
