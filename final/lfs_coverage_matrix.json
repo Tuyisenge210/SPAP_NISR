@@ -1,0 +1,94 @@
+{
+  "project": "SPAP_NISR",
+  "coverage": [
+    {
+      "chapter": "Chapter 1",
+      "title": "Background and methodology",
+      "status": "planned",
+      "target": "Methodological narrative and metadata appendix."
+    },
+    {
+      "chapter": "Chapter 2",
+      "title": "Working-age population and demographic profile",
+      "status": "implemented",
+      "target": "table_2_1, table_2_2 and visualization-ready long tables."
+    },
+    {
+      "chapter": "Chapter 3",
+      "title": "Labour force participation and unemployment",
+      "status": "implemented",
+      "target": "table_3_1 and macro trend outputs across 2020-2025."
+    },
+    {
+      "chapter": "Chapter 4",
+      "title": "Employment by status and sector",
+      "status": "implemented",
+      "target": "table_4_1 and employment-status cross-tabulations."
+    },
+    {
+      "chapter": "Chapter 5",
+      "title": "Youth labour market conditions",
+      "status": "implemented",
+      "target": "table_5_1 and youth metrics summary."
+    },
+    {
+      "chapter": "Chapter 6",
+      "title": "Outside labour force and other labour force categories",
+      "status": "implemented",
+      "target": "table_6_1 and OLF breakdown tables."
+    },
+    {
+      "chapter": "Chapter 7",
+      "title": "Informality and labour quality",
+      "status": "implemented",
+      "target": "table_7_1 and informality profiles."
+    }
+  ]
+}
+{
+  "project": "SPAP_NISR",
+  "coverage": [
+    {
+      "chapter": "Chapter 1",
+      "title": "Background and methodology",
+      "status": "planned",
+      "target": "Methodological narrative and metadata appendix."
+    },
+    {
+      "chapter": "Chapter 2",
+      "title": "Working-age population and demographic profile",
+      "status": "implemented",
+      "target": "table_2_1, table_2_2 and visualization-ready long tables."
+    },
+    {
+      "chapter": "Chapter 3",
+      "title": "Labour force participation and unemployment",
+      "status": "implemented",
+      "target": "table_3_1 and macro trend outputs across 2020-2025."
+    },
+    {
+      "chapter": "Chapter 4",
+      "title": "Employment by status and sector",
+      "status": "implemented",
+      "target": "table_4_1 and employment-status cross-tabulations."
+    },
+    {
+      "chapter": "Chapter 5",
+      "title": "Youth labour market conditions",
+      "status": "implemented",
+      "target": "table_5_1 and youth metrics summary."
+    },
+    {
+      "chapter": "Chapter 6",
+      "title": "Outside labour force and other labour force categories",
+      "status": "implemented",
+      "target": "table_6_1 and OLF breakdown tables."
+    },
+    {
+      "chapter": "Chapter 7",
+      "title": "Informality and labour quality",
+      "status": "implemented",
+      "target": "table_7_1 and informality profiles."
+    }
+  ]
+}

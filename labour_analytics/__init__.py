@@ -15,6 +15,7 @@ from .publisher import ExcelPublisher
 from .validation import ValidationEngine
 from .viz import export_visualization_ready_datasets
 from .pipeline import Pipeline
+from .production_catalogue import catalogue_payload, write_catalogue
 
 __all__ = [
     "Config",
@@ -33,4 +34,6 @@ __all__ = [
     "ValidationEngine",
     "export_visualization_ready_datasets",
     "Pipeline",
+    "catalogue_payload",
+    "write_catalogue",
 ]
