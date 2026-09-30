@@ -23,7 +23,7 @@ interface LfsState {
 
 const synthetic: Dataset = {
   source: "synthetic",
-  label: "Synthetic LFS 2020-2025 (NISR calibrated)",
+  label: "Calibration sample only — not a validated live LFS microdata source",
   uploadedAt: new Date().toISOString(),
   records: generateSynthetic2025(),
 };

@@ -18,10 +18,23 @@ def load_all_waves(
         raw_folder = Config.FOLDERS["raw"]
 
     waves = {}
+    missing = []
     for year in years:
         path = os.path.join(raw_folder, f"RW_LFS{year}.dta")
         if os.path.exists(path):
-            waves[year] = read_raw_stata(path)
+            waves[year] = load_raw_stata(path)
         else:
-            raise FileNotFoundError(f"Missing raw file: {path}")
+            missing.append(path)
+
+    if not waves:
+        raise FileNotFoundError(
+            "No raw LFS microdata files were found in the configured raw folder. "
+            "This project requires the official Rwanda LFS .dta files or an equivalent validated source."
+        )
+
+    if missing:
+        raise FileNotFoundError(
+            "Some raw LFS microdata files are missing: " + "; ".join(missing)
+        )
+
     return waves
