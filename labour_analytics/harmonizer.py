@@ -31,6 +31,8 @@ def build_master_panel(
     raw_folder=None,
     rename_dict=None,
 ) -> pd.DataFrame:
+    Config.ensure_folders()
+
     if years is None:
         years = Config.YEARS
     if raw_folder is None:
