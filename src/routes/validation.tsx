@@ -124,7 +124,7 @@ function ValidationPage() {
 
       <p className="mt-4 text-xs text-muted-foreground">
         Source · <span className="font-semibold text-primary">NISR</span> <em>Labour Force Survey – Annual Report 2025</em> and <em>November 2025 (Q4)</em> infographic.
-        Synthetic dataset cells are calibrated to these aggregates; real microdata will reproduce them within tolerance.
+        This page uses a calibration sample only; official LFS production runs must use the validated raw microdata and the harmonized production pipeline.
       </p>
     </AppShell>
   );

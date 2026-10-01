@@ -6,7 +6,8 @@ import type { FilterState } from "@/lib/lfs/filters";
 import { generateSynthetic2025 } from "@/lib/lfs/synthetic";
 
 interface Dataset {
-  source: "synthetic" | "uploaded";
+  source: "calibration" | "uploaded" | "official";
+  mode: "calibration" | "official";
   label: string;
   uploadedAt: string;
   records: LfsRecord[];
@@ -22,8 +23,9 @@ interface LfsState {
 }
 
 const synthetic: Dataset = {
-  source: "synthetic",
-  label: "Synthetic LFS 2020-2025 (NISR calibrated)",
+  source: "calibration",
+  mode: "calibration",
+  label: "Calibration sample only — not official LFS production data",
   uploadedAt: new Date().toISOString(),
   records: generateSynthetic2025(),
 };

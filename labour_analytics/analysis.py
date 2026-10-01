@@ -104,6 +104,7 @@ def compute_ch4_employment_status(wap_data, weight_col):
         values=wap_data[weight_col],
         aggfunc="sum",
     )
+    table = table.reindex(index=range(1, 6), fill_value=0)
     table.index = _CH4_STATUS_INDEX
     table.index.name = "Employment Status"
     return table
@@ -161,6 +162,7 @@ def compute_ch6_olf_characteristics(olf_data, weight_col):
         values=olf_data[weight_col],
         aggfunc="sum",
     )
+    table = table.reindex(index=[0, 1], fill_value=0)
     table.index = ["Inactive / Other OLF", "Subsistence Foodstuff Producers"]
     table.index.name = "OLF Sub-Category"
     return table
@@ -196,6 +198,7 @@ def compute_ch7_informality_profiles(employed_data, weight_col):
         values=employed_data[weight_col],
         aggfunc="sum",
     )
+    table = table.reindex(index=[0, 1], fill_value=0)
     table = table.div(table.sum(axis=0), axis=1) * 100
     table.index = ["Formal Employment (%)", "Informal Employment (%)"]
     table.index.name = "Employment Type"

@@ -6,12 +6,26 @@ from .config import Config
 class ValidationEngine:
     def __init__(self):
         self.validation_passed = True
-        self.macro_xls = pd.ExcelFile(
-            os.path.join(Config.FOLDERS["final"], "LFS_Macro_Indicators_Report.xlsx")
+        self.macro_xls_path = os.path.join(
+            Config.FOLDERS["final"], "LFS_Macro_Indicators_Report.xlsx"
         )
-        self.master_xls = pd.ExcelFile(Config.EXCEL_REPORT)
+        self.master_xls_path = Config.EXCEL_REPORT
+        self.macro_xls = self._safe_excel_file(self.macro_xls_path)
+        self.master_xls = self._safe_excel_file(self.master_xls_path)
+
+    def _safe_excel_file(self, path):
+        if not os.path.exists(path):
+            print(f"[WARN] Validation workbook missing: {path}")
+            self.validation_passed = False
+            return None
+        return pd.ExcelFile(path)
 
     def _load_sheet(self, xls, sheet_name, **kwargs):
+        if xls is None:
+            print(f"[WARN] Workbook unavailable for sheet '{sheet_name}'.")
+            self.validation_passed = False
+            return pd.DataFrame()
+
         default_kwargs = {"header": 3}
         default_kwargs.update(kwargs)
         try:

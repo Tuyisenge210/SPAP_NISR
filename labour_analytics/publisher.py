@@ -51,7 +51,7 @@ class ExcelPublisher:
         sheet_name: str,
         title: str,
         start_row: int = 4,
-        number_format: str = _DATE_GROUP_FMT,
+        number_format: str | dict[str, str] = _DATE_GROUP_FMT,
     ):
         ws = self._writer.book.create_sheet(title=sheet_name)
 
@@ -85,7 +85,12 @@ class ExcelPublisher:
                 cell.border = self._border
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 if isinstance(value, (int, float)) and not isinstance(value, bool):
-                    cell.number_format = number_format
+                    column_name = str(df_to_write.columns[c_idx - 1])
+                    cell.number_format = (
+                        number_format.get(column_name, _DATE_GROUP_FMT)
+                        if isinstance(number_format, dict)
+                        else number_format
+                    )
 
         for c_idx, col_name in enumerate(df_to_write.columns, 1):
             series = df_to_write[col_name]

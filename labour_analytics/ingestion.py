@@ -21,7 +21,7 @@ def load_all_waves(
     for year in years:
         path = os.path.join(raw_folder, f"RW_LFS{year}.dta")
         if os.path.exists(path):
-            waves[year] = read_raw_stata(path)
+            waves[year] = load_raw_stata(path)
         else:
             raise FileNotFoundError(f"Missing raw file: {path}")
     return waves

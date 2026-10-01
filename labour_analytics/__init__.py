@@ -16,6 +16,14 @@ from .validation import ValidationEngine
 from .viz import export_visualization_ready_datasets
 from .pipeline import Pipeline
 from .production_catalogue import catalogue_payload, write_catalogue
+from .table_engine import (
+    CHAPTER_TABLE_CATALOGUE,
+    TABLE_CATALOGUE,
+    TableProductionRun,
+    produce_tables,
+    table_catalogue_payload,
+)
+from .chapters import chapter_table_catalogue, produce_chapter_tables
 
 __all__ = [
     "Config",
@@ -36,4 +44,11 @@ __all__ = [
     "Pipeline",
     "catalogue_payload",
     "write_catalogue",
+    "TABLE_CATALOGUE",
+    "CHAPTER_TABLE_CATALOGUE",
+    "TableProductionRun",
+    "produce_tables",
+    "table_catalogue_payload",
+    "chapter_table_catalogue",
+    "produce_chapter_tables",
 ]

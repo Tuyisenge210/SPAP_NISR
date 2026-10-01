@@ -91,7 +91,7 @@ function UploadPage() {
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={reset}>
-          <RotateCcw className="mr-1 h-3.5 w-3.5" />Reset to synthetic
+          <RotateCcw className="mr-1 h-3.5 w-3.5" />Reset to calibration sample
         </Button>
       </div>
 

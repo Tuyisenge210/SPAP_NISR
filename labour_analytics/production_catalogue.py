@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+from .chapters import CHAPTER_MODULES, chapter_table_catalogue
+from .table_engine import table_catalogue_payload
+
 ROOT = Path(__file__).resolve().parent.parent
 RAW_ROOT = ROOT / "raw"
 DATA_ROOT = ROOT / "data"
@@ -93,6 +96,12 @@ SOURCE_INVENTORY: List[Dict[str, Any]] = [
         "notes": "Macro indicators workbook covering headline labour market measures.",
     },
     {
+        "file": "final/Rwanda_LFS_Main_Tables_2020_2025.xlsx",
+        "kind": "chapter-table-workbook",
+        "status": "generated-on-run",
+        "notes": "Chapter-ordered Table 1 through Table 25 outputs, including numbered sub-tables.",
+    },
+    {
         "file": "final/RLFS_Harmonized_2020_2025.parquet",
         "kind": "harmonized-panel",
         "status": "available",
@@ -102,54 +111,13 @@ SOURCE_INVENTORY: List[Dict[str, Any]] = [
 
 CHAPTER_CATALOGUE: List[Dict[str, Any]] = [
     {
-        "chapter": "Chapter 1",
-        "title": "Background and methodology",
-        "status": "planned",
-        "scope": "Narrative background, survey design, metadata, and methodological definitions.",
-        "production_target": "Methodological narrative and metadata appendix.",
-    },
-    {
-        "chapter": "Chapter 2",
-        "title": "Working-age population and demographic profile",
+        "chapter": f"Chapter {chapter.CHAPTER_NUMBER}",
+        "title": chapter.CHAPTER_TITLE,
         "status": "implemented",
-        "scope": "WAP composition by age, sex, residence, and survey year.",
-        "production_target": "table_2_1, table_2_2 and visualization-ready long tables.",
-    },
-    {
-        "chapter": "Chapter 3",
-        "title": "Labour force participation and unemployment",
-        "status": "implemented",
-        "scope": "LFPR, unemployment, underemployment and underutilization indicators.",
-        "production_target": "table_3_1 and macro trend outputs across 2020-2025.",
-    },
-    {
-        "chapter": "Chapter 4",
-        "title": "Employment by status and sector",
-        "status": "implemented",
-        "scope": "Employment status categories and sectoral profiling.",
-        "production_target": "table_4_1 and employment-status cross-tabulations.",
-    },
-    {
-        "chapter": "Chapter 5",
-        "title": "Youth labour market conditions",
-        "status": "implemented",
-        "scope": "Youth unemployment and NEET-related indicators.",
-        "production_target": "table_5_1 and youth metrics summary.",
-    },
-    {
-        "chapter": "Chapter 6",
-        "title": "Outside labour force and other labour force categories",
-        "status": "implemented",
-        "scope": "OLF classification and inactivity profiles.",
-        "production_target": "table_6_1 and OLF breakdown tables.",
-    },
-    {
-        "chapter": "Chapter 7",
-        "title": "Informality and labour quality",
-        "status": "implemented",
-        "scope": "Formal vs informal employment composition and quality measures.",
-        "production_target": "table_7_1 and informality profiles.",
-    },
+        "scope": "Tables in the provided Rwanda LFS main-table order, calculated from weighted harmonized microdata.",
+        "production_target": ", ".join(spec[0] for spec in chapter.TABLE_SPECS),
+    }
+    for chapter in CHAPTER_MODULES
 ]
 
 OUTPUT_COVERAGE: List[Dict[str, Any]] = [
@@ -213,13 +181,31 @@ OUTPUT_COVERAGE: List[Dict[str, Any]] = [
 
 
 def catalogue_payload() -> Dict[str, Any]:
+    chapter_outputs = [
+        {
+            "output_id": table["table_id"],
+            "name": table["title"],
+            "chapter": table["chapter"],
+            "source": "raw/*.dta",
+            "status": "implemented",
+        }
+        for table in chapter_table_catalogue()
+    ]
+    workbook_output = {
+        "output_id": "report_main_tables_workbook",
+        "name": "Chapter-ordered LFS main tables workbook",
+        "chapter": "Chapters 1-11",
+        "source": "final/Rwanda_LFS_Main_Tables_2020_2025.xlsx",
+        "status": "generated-on-run",
+    }
     return {
         "project": "SPAP_NISR",
         "survey": "Rwanda Labour Force Survey",
         "years": [2020, 2021, 2022, 2023, 2024, 2025],
         "source_inventory": SOURCE_INVENTORY,
         "chapter_catalogue": CHAPTER_CATALOGUE,
-        "output_coverage": OUTPUT_COVERAGE,
+        "output_coverage": OUTPUT_COVERAGE + chapter_outputs + [workbook_output],
+        "table_catalogue": table_catalogue_payload(),
     }
 
 

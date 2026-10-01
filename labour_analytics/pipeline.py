@@ -1,20 +1,12 @@
 import logging
 import os
-import pandas as pd
 
 from .config import Config
 from .harmonizer import build_master_panel
 from .indicators import compute_all_indicators
-from .analysis import (
-    compute_ch2_wap_distribution,
-    compute_ch2_age_profiles,
-    compute_ch3_macro_trends,
-    compute_ch4_employment_status,
-    compute_ch5_youth_metrics,
-    compute_ch6_olf_characteristics,
-    compute_ch7_informality_profiles,
-)
 from .publisher import ExcelPublisher
+from .production_catalogue import write_catalogue
+from .table_engine import CHAPTER_TABLE_CATALOGUE, LEGACY_TABLE_CATALOGUE, produce_tables
 from .validation import ValidationEngine
 from .viz import export_visualization_ready_datasets
 
@@ -37,7 +29,6 @@ class Pipeline:
         setup_logging()
         self.logger = logging.getLogger(__name__)
         self.master_panel = None
-        self.wap_data = None
 
     def run_phase1(self):
         self.logger.info("Phase 1: Integration and Harmonization starting...")
@@ -57,16 +48,7 @@ class Pipeline:
         if self.master_panel is None:
             raise RuntimeError("Master panel not built. Run Phase 1 first.")
 
-        if "weight" in self.master_panel.columns:
-            weight_col = "weight"
-        elif "weight2" in self.master_panel.columns:
-            weight_col = "weight2"
-        elif "Weight" in self.master_panel.columns:
-            weight_col = "Weight"
-        else:
-            raise RuntimeError("No weight column found in master panel.")
-
-        self.wap_data = self.master_panel[self.master_panel["wap16"] == 1].copy()
+        self.table_run = produce_tables(self.master_panel)
 
         macro_report_path = os.path.join(
             Config.FOLDERS["final"], "LFS_Macro_Indicators_Report.xlsx"
@@ -74,15 +56,26 @@ class Pipeline:
         master_report_path = Config.EXCEL_REPORT
 
         with ExcelPublisher(macro_report_path) as macro_pub:
-            self._write_chapter2(macro_pub, weight_col)
-            self._write_chapter3(macro_pub)
+            self._write_tables(macro_pub, {"Chapter 2", "Chapter 3"})
 
         with ExcelPublisher(master_report_path) as master_pub:
-            self._write_chapter4(master_pub, weight_col)
-            self._write_chapter5(master_pub, weight_col)
-            self._write_chapter6(master_pub, weight_col)
-            self._write_chapter7(master_pub, weight_col)
+            self._write_tables(master_pub, {"Chapter 4", "Chapter 5", "Chapter 6", "Chapter 7"})
 
+        with ExcelPublisher(Config.MAIN_TABLE_REPORT) as chapter_pub:
+            for definition in CHAPTER_TABLE_CATALOGUE:
+                table = self.table_run.tables[definition.table_id]
+                number_formats = {
+                    column: "0.0" if "%" in str(column) else "#,##0"
+                    for column in table.select_dtypes(include="number").columns
+                }
+                chapter_pub.write_sheet(
+                    table,
+                    sheet_name=definition.sheet_name,
+                    title=definition.title,
+                    number_format=number_formats,
+                )
+
+                write_catalogue(Config.FOLDERS["final"])
         export_visualization_ready_datasets(self.master_panel)
         self.logger.info("Phase 3 complete. Tables exported.")
 
@@ -107,75 +100,16 @@ class Pipeline:
         )
         return passed
 
-    def _write_chapter2(self, publisher, weight_col):
-        self.logger.info("Writing Chapter 2 tables...")
-        table_21 = compute_ch2_wap_distribution(self.wap_data, weight_col)
-        publisher.write_sheet(
-            table_21,
-            sheet_name="Table_2.1_WAP_Distribution",
-            title="Table 2.1: Working Age Population Distribution by Area of Residence and Gender",
-            number_format="#,##0",
-        )
-
-        table_22 = compute_ch2_age_profiles(self.wap_data, weight_col)
-        publisher.write_sheet(
-            table_22,
-            sheet_name="Table_2.2_Age_Profiles",
-            title="Table 2.2: Weighted Age Cohort Distribution (%)",
-            number_format="0.0",
-        )
-
-    def _write_chapter3(self, publisher):
-        self.logger.info("Writing Chapter 3 tables...")
-        macro = compute_ch3_macro_trends(self.wap_data)
-        publisher.write_sheet(
-            macro,
-            sheet_name="Table_3.1_ILO_Macro_Trends",
-            title="Table 3.1: ILO Macro Trends (WAP Volume, LFPR, UR1, LU2, LU3, LUUR)",
-            number_format="0.0",
-        )
-
-    def _write_chapter4(self, publisher, weight_col):
-        self.logger.info("Writing Chapter 4 tables...")
-        ch4 = compute_ch4_employment_status(self.wap_data, weight_col)
-        publisher.write_sheet(
-            ch4,
-            sheet_name="Ch4_Employment_Status",
-            title="Chapter 4: Employment Status in Employment (D05)",
-            number_format="#,##0",
-        )
-
-    def _write_chapter5(self, publisher, weight_col):
-        self.logger.info("Writing Chapter 5 tables...")
-        ch5 = compute_ch5_youth_metrics(self.wap_data, weight_col)
-        publisher.write_sheet(
-            ch5,
-            sheet_name="Ch5_Youth_NEET_Metrics",
-            title="Chapter 5: Youth Unemployment and NEET Metrics",
-            number_format="#,##0",
-        )
-
-    def _write_chapter6(self, publisher, weight_col):
-        self.logger.info("Writing Chapter 6 tables...")
-        olf_data = self.wap_data[self.wap_data["lf_status"] == 3].copy()
-        ch6 = compute_ch6_olf_characteristics(olf_data, weight_col)
-        publisher.write_sheet(
-            ch6,
-            sheet_name="Ch6_OLF_Characteristics",
-            title="Chapter 6: Characteristics of Persons Outside the Labour Force",
-            number_format="#,##0",
-        )
-
-    def _write_chapter7(self, publisher, weight_col):
-        self.logger.info("Writing Chapter 7 tables...")
-        employed_data = self.wap_data[self.wap_data["lf_status"] == 1].copy()
-        ch7 = compute_ch7_informality_profiles(employed_data, weight_col)
-        publisher.write_sheet(
-            ch7,
-            sheet_name="Ch7_Informality_Profiles",
-            title="Chapter 7: Informal Sector and Informal Employment (%)",
-            number_format="0.0",
-        )
+    def _write_tables(self, publisher, chapters):
+        for definition in LEGACY_TABLE_CATALOGUE:
+            if definition.chapter not in chapters:
+                continue
+            publisher.write_sheet(
+                self.table_run.tables[definition.table_id],
+                sheet_name=definition.sheet_name,
+                title=definition.title,
+                number_format=definition.number_format,
+            )
 
     def execute(self):
         self.run_phase1()

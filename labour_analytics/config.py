@@ -5,7 +5,7 @@ load_dotenv()
 
 
 class Config:
-    ROOT_DIR = os.getenv("PROJECT_ROOT", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+    ROOT_DIR = os.getenv("PROJECT_ROOT", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     FOLDERS = {
         "raw": os.path.join(ROOT_DIR, "raw"),
         "temp": os.path.join(ROOT_DIR, "temp"),
@@ -35,6 +35,7 @@ class Config:
 
     FINAL_PARQUET = os.path.join(FOLDERS["final"], "RLFS_Harmonized_2020_2025.parquet")
     EXCEL_REPORT = os.path.join(FOLDERS["final"], "Rwanda_LFS_2020_2025_Master_Report.xlsx")
+    MAIN_TABLE_REPORT = os.path.join(FOLDERS["final"], "Rwanda_LFS_Main_Tables_2020_2025.xlsx")
 
     @classmethod
     def ensure_folders(cls):
