@@ -75,7 +75,8 @@ class Pipeline:
                     number_format=number_formats,
                 )
 
-                write_catalogue(Config.FOLDERS["final"])
+            self.master_panel.to_parquet(Config.FINAL_PARQUET, index=False)
+            write_catalogue(Config.FOLDERS["final"])
         export_visualization_ready_datasets(self.master_panel)
         self.logger.info("Phase 3 complete. Tables exported.")
 

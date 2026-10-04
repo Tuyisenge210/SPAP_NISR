@@ -33,7 +33,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(","),
+    allow_origins=os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080,http://localhost:3000",
+    ).split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,12 +59,12 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(indicators.router, prefix="/api/v1", tags=["indicators"])
 app.include_router(tables.router, prefix="/api/v1", tags=["tables"])
-app.include_router(viz.router, prefix="/api/v1", tags=["viz"])
 app.include_router(reports.router, prefix="/api/v1", tags=["reports"])
 app.include_router(upload.router, prefix="/api/v1", tags=["upload"])
 app.include_router(metadata.router, prefix="/api/v1", tags=["metadata"])
 app.include_router(validation.router, prefix="/api/v1", tags=["validation"])
 app.include_router(logs.router, prefix="/api/v1", tags=["logs"])
+app.include_router(viz.router, prefix="/api/v1", tags=["viz"])
 
 
 @app.get("/", response_model=ApiEnvelope)

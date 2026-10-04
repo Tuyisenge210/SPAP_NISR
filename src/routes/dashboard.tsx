@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
 import { AppShell } from "@/components/lfs/app-shell";
-import { FilterBar } from "@/components/lfs/filter-bar";
 import { cn } from "@/lib/utils";
+import { ExecutiveDashboardContent } from "./dashboard.index";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -27,9 +27,13 @@ function DashboardLayout() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
     <AppShell>
-      <div className="mb-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboards</h1>
-        <p className="mt-1 text-sm text-muted-foreground">All values are survey-weighted. Filters apply across every tab.</p>
+      <div className="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#16814b]">Rwanda Labour Force Survey</div>
+          <h1 className="mt-1 text-xl font-bold text-[#0b4778]">Statistical dashboards</h1>
+          <p className="mt-1 text-xs text-slate-600">Executive indicators use the production API. Other views remain calibration previews until connected.</p>
+        </div>
+        <span className="inline-flex items-center gap-2 self-start border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-950 sm:self-auto">Calibration preview on non-executive tabs</span>
       </div>
 
       <div className="mb-4 border-b">
@@ -55,11 +59,11 @@ function DashboardLayout() {
         </nav>
       </div>
 
-      <div className="mb-5">
-        <FilterBar />
-      </div>
-
-      <Outlet />
+      {path === "/dashboard" || path === "/dashboard/" ? (
+        <ExecutiveDashboardContent />
+      ) : (
+        <Outlet />
+      )}
     </AppShell>
   );
 }
