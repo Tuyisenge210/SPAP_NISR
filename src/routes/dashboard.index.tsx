@@ -20,7 +20,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getDashboardSummary, type DashboardFilters, type DashboardPayload } from "@/lib/api/lfs";
+import { SPAP_ENV_BADGE } from "@/lib/env";
 
 export const Route = createFileRoute("/dashboard/")({
   head: () => ({
@@ -174,8 +174,11 @@ export function ExecutiveDashboardContent() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center border px-3 py-2 text-xs font-semibold ${data.mode === "calibration" ? "border-amber-300 bg-amber-100 text-amber-900" : "border-white/30 bg-white/10"}`}>
+              [{data.mode === "calibration" ? "CALIBRATION" : SPAP_ENV_BADGE}]
+            </span>
             <span className="inline-flex items-center gap-2 border border-white/30 bg-white/10 px-3 py-2 text-xs font-semibold">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" /> Production source
+              <ShieldCheck className="h-4 w-4 text-emerald-300" /> {data.mode === "calibration" ? "Non-production data" : "Production source"}
             </span>
             <button
               className="inline-flex items-center gap-2 border border-white/35 px-3 py-2 text-xs font-semibold hover:bg-white/10"

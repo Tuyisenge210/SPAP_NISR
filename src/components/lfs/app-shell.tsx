@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { BarChart3, Database, FileText, Home, Table2, FlaskConical, BookOpen, CalendarClock, Info, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import { SPAP_ENV_BADGE, IS_DEVELOPMENT_MODE } from "@/lib/env";
 
 const NAV = [
   { to: "/", label: "Overview", icon: Home },
@@ -55,6 +56,17 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <nav className="ml-auto hidden items-center gap-1 md:flex">
+            <span
+              className={cn(
+                "mr-2 inline-flex items-center rounded border px-2 py-1 text-[10px] font-bold tracking-wider",
+                IS_DEVELOPMENT_MODE
+                  ? "border-amber-400 bg-amber-50 text-amber-800"
+                  : "border-emerald-500 bg-emerald-50 text-emerald-800",
+              )}
+              title={IS_DEVELOPMENT_MODE ? "Development/calibration mode. Synthetic or non-production data may appear only where explicitly enabled." : "Production mode. Statistics must come from backend /api/v1 production pipelines."}
+            >
+              [{SPAP_ENV_BADGE}]
+            </span>
             {NAV.map((n) => {
               const active = isActive(n.to, "prefix" in n ? n.prefix : undefined);
               const Icon = n.icon;

@@ -1,222 +1,140 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/lfs/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useLfsStore } from "@/store/lfs-store";
-import { useCallback, useState } from "react";
-import {
-  type RawTable, parseFile, autoMap, applyMapping,
-} from "@/lib/lfs/parse";
-import { CANONICAL_FIELDS, REQUIRED_FIELDS, type CanonicalField, type SurveyFormat } from "@/lib/lfs/schema";
-import { CheckCircle2, FileSpreadsheet, UploadCloud, RotateCcw, Database, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2, Database, Loader2, UploadCloud } from "lucide-react";
+import { getIngestionJob, uploadDataset, type IngestionJob, type IngestionUploadResponse } from "@/lib/api/lfs";
+import { SPAP_ENV_BADGE } from "@/lib/env";
 
 export const Route = createFileRoute("/upload")({
   head: () => ({
     meta: [
       { title: "Data — SPAP" },
-      { name: "description", content: "Upload LFS datasets in CSV, Excel (.xlsx, .xls) or Stata (.dta) format." },
-      { property: "og:title", content: "Data upload — SPAP" },
-      { property: "og:description", content: "Statistical data import for NISR Labour Force Survey analysis." },
+      { name: "description", content: "Upload LFS datasets in .dta, .csv, or .xlsx format to the backend ingestion pipeline." },
     ],
   }),
   component: UploadPage,
 });
 
-const NONE = "__none__";
-
 function UploadPage() {
-  const setDataset = useLfsStore((s) => s.setDataset);
-  const dataset = useLfsStore((s) => s.dataset);
-  const reset = useLfsStore((s) => s.resetToSynthetic);
-  const [table, setTable] = useState<RawTable | null>(null);
-  const [mapping, setMapping] = useState<Partial<Record<CanonicalField, string>> | null>(null);
-  const [mappingResult, setMappingResult] = useState<{ warnings: string[] } | null>(null);
-  const [fileName, setFileName] = useState<string>("");
+  const [file, setFile] = useState<File | null>(null);
+  const [runPipeline, setRunPipeline] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ ok: number; warnings: string[]; harmonizationNotes: Record<string, string> } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [response, setResponse] = useState<IngestionUploadResponse | null>(null);
+  const [job, setJob] = useState<IngestionJob | null>(null);
 
-  const onFile = useCallback(async (f: File) => {
-    setError(null); setResult(null); setTable(null); setMappingResult(null);
+  useEffect(() => {
+    if (!response?.job_id || !runPipeline) return;
+    let active = true;
+    const poll = async () => {
+      try {
+        const next = await getIngestionJob(response.job_id);
+        if (!active) return;
+        setJob(next);
+        if (["completed", "failed", "rejected"].includes(next.status)) return;
+      } catch (e) {
+        if (!active) return;
+        setError(e instanceof Error ? e.message : "Unable to fetch ingestion job status.");
+        return;
+      }
+      setTimeout(poll, 2000);
+    };
+    poll();
+    return () => { active = false; };
+  }, [response?.job_id, runPipeline]);
+
+  const onSubmit = async () => {
+    if (!file) return;
+    setError(null); setResponse(null); setJob(null); setUploading(true);
     try {
-      const t = await parseFile(f);
-      setTable(t);
-      const auto = autoMap(t.columns);
-      setMapping(auto.mapping);
-      setMappingResult({ warnings: auto.warnings });
-      setFileName(f.name);
+      const result = await uploadDataset(file, runPipeline);
+      setResponse(result);
     } catch (e) {
-      setError((e as Error).message);
+      setError(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setUploading(false);
     }
-  }, []);
-
-  const finalize = () => {
-    if (!table || !mapping) return;
-    const res = applyMapping(table, mapping, { year: 2025, format: fileName?.split('.').pop()?.toLowerCase() as SurveyFormat | undefined });
-    if (res.missing.length) {
-      setError(`Missing required mappings: ${res.missing.join(", ")}`);
-      return;
-    }
-    if (!res.records.length) {
-      setError("No valid rows after mapping. Check sex / status / weight columns.");
-      return;
-    }
-    
-    // Check validation warnings for critical issues
-    const criticalWarnings = Object.entries(res.validationWarnings).filter(([_, w]) => w);
-    if (criticalWarnings.length > 0) {
-      const warnText = criticalWarnings.map(([f]) => `${f}: ${res.validationWarnings[f]}`).join("; ");
-      if (!confirm(`Validation warnings detected: ${warnText}. Continue anyway?`)) return;
-    }
-    
-    setDataset({
-      source: "uploaded",
-      label: fileName || "Uploaded dataset",
-      uploadedAt: new Date().toISOString(),
-      records: res.records,
-    });
-    setResult({ ok: res.records.length, warnings: [...res.warnings, ...criticalWarnings.map(([, w]) => w)], harmonizationNotes: res.harmonizationNotes });
   };
 
   return (
     <AppShell>
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Data ingestion</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            CSV, Excel (.xlsx/.xls) or Stata (.dta). Map columns to the canonical schema, then publish to the engine.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={reset}>
-          <RotateCcw className="mr-1 h-3.5 w-3.5" />Reset to calibration sample
-        </Button>
+      <div className="mb-6">
+        <div className="mb-2 inline-flex rounded border border-emerald-500 bg-emerald-50 px-2 py-1 text-[10px] font-bold tracking-wider text-emerald-800">[{SPAP_ENV_BADGE}]</div>
+        <h1 className="text-2xl font-semibold tracking-tight">Server-side data ingestion</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Uploads are sent to <code>/api/v1/dataset</code> as multipart form data. Supported formats: <code>.dta</code>, <code>.csv</code>, <code>.xlsx</code>, <code>.xls</code>.
+          The backend validates the weight column, records a SHA-256 manifest, and can trigger the production pipeline asynchronously.
+        </p>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">1. Upload file</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-base">1. Upload dataset file</CardTitle></CardHeader>
         <CardContent>
-          <label
-            htmlFor="lfs-upload"
-            className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-secondary/30 p-8 text-center transition-colors hover:border-primary/60"
-          >
+          <label htmlFor="lfs-upload" className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-secondary/30 p-8 text-center transition-colors hover:border-primary/60">
             <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
             <div className="text-sm font-medium">Drop a file or click to browse</div>
-            <div className="mt-1 text-xs text-muted-foreground">.csv · .xlsx · .xls · .dta — processed locally</div>
-            <input
-              id="lfs-upload"
-              type="file"
-              accept=".csv,.txt,.xlsx,.xls,.dta"
-              className="sr-only"
-              onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-            />
+            <div className="mt-1 text-xs text-muted-foreground">.dta · .csv · .xlsx · .xls — processed by backend ingestion service</div>
+            <input id="lfs-upload" type="file" accept=".csv,.txt,.xlsx,.xls,.dta" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
-          {fileName && (
+          {file && (
             <div className="mt-3 flex items-center gap-2 text-sm">
               <Database className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{fileName}</span>
-              <span className="text-muted-foreground">· {table?.rows.length.toLocaleString()} rows · {table?.columns.length} columns</span>
+              <span className="font-medium">{file.name}</span>
+              <span className="text-muted-foreground">· {(file.size / 1024 / 1024).toFixed(2)} MB</span>
             </div>
           )}
-{mappingResult?.warnings && mappingResult.warnings.length > 0 && (
-           <Alert variant="default" className="mt-3 border-warning/30 bg-warning/5">
-             <AlertTriangle className="h-4 w-4 text-warning" />
-             <AlertDescription>
-               {mappingResult.warnings.map((w, i) => <div key={i}>{w}</div>)}
-             </AlertDescription>
-           </Alert>
-         )}
-         {error && (
-           <Alert variant="destructive" className="mt-3">
-             <AlertDescription>{error}</AlertDescription>
-           </Alert>
-         )}
+          <label className="mt-4 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={runPipeline} onChange={(e) => setRunPipeline(e.target.checked)} />
+            Trigger production pipeline after validation
+          </label>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={onSubmit} disabled={!file || uploading}>
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+              Upload to backend
+            </Button>
+          </div>
+          {error && <Alert variant="destructive" className="mt-3"><AlertDescription>{error}</AlertDescription></Alert>}
         </CardContent>
       </Card>
 
-      {table && (
+      {response && (
         <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="text-base">2. Map columns</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {CANONICAL_FIELDS.map((f) => {
-                const req = REQUIRED_FIELDS.includes(f);
-                return (
-                  <div key={f}>
-                    <Label className="text-xs">
-                      {f}
-                      {req && <span className="ml-1 text-destructive">*</span>}
-                    </Label>
-                    <Select
-                      value={mapping[f] ?? NONE}
-                      onValueChange={(v) => setMapping((m) => ({ ...m, [f]: v === NONE ? undefined : v }))}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="— not mapped —" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>— not mapped —</SelectItem>
-                        {table.columns.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                );
-              })}
+          <CardHeader><CardTitle className="text-base">2. Ingestion manifest and status</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Alert className="border-emerald-300 bg-emerald-50">
+              <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+              <AlertDescription>
+                Job <strong>{response.job_id}</strong> accepted for <strong>{response.filename}</strong>. SHA-256: <code className="break-all">{response.sha256}</code>
+              </AlertDescription>
+            </Alert>
+            <div className="grid gap-2 md:grid-cols-2">
+              <div><span className="text-muted-foreground">Status:</span> <strong>{job?.status ?? response.status}</strong></div>
+              <div><span className="text-muted-foreground">Progress:</span> <strong>{job?.progress ?? "queued/accepted"}{typeof job?.progress === "number" ? "%" : ""}</strong></div>
+              <div><span className="text-muted-foreground">Manifest:</span> <code className="break-all text-xs">{response.manifest_path}</code></div>
+              <div><span className="text-muted-foreground">Weight column:</span> <strong>{response.validation?.weight_column ?? job?.validation?.weight_column ?? "n/a"}</strong></div>
+              <div><span className="text-muted-foreground">Detected year:</span> <strong>{response.validation?.detected_year ?? "n/a"}</strong></div>
+              <div><span className="text-muted-foreground">Detected quarter:</span> <strong>{response.validation?.detected_quarter ?? "n/a"}</strong></div>
             </div>
-            <div className="mt-5 flex items-center gap-3">
-              <Button onClick={finalize}>Publish to engine</Button>
-              <span className="text-xs text-muted-foreground">Required: {REQUIRED_FIELDS.join(", ")}</span>
-            </div>
-{result && (
-               <Alert className="mt-4 border-success/30 bg-success/5">
-                 <CheckCircle2 className="h-4 w-4 text-success" />
-                 <AlertDescription>
-                   Loaded <strong>{result.ok.toLocaleString()}</strong> records into the engine.
-                   {result.warnings.map((w, i) => <div key={i} className="mt-1 text-xs text-muted-foreground">{w}</div>)}
-                   {Object.keys(result.harmonizationNotes).length > 0 && (
-                     <div className="mt-2 text-xs" style={{ color: "var(--color-primary)" }}>
-                       <strong>Harmonization notes:</strong>
-                       <ul className="mt-1 list-disc pl-4 space-y-0.5">
-                         {Object.entries(result.harmonizationNotes).map(([field, note]) => (
-                           <li key={field}><strong>{field}:</strong> {note}</li>
-                         ))}
-                       </ul>
-                     </div>
-                   )}
-                 </AlertDescription>
-               </Alert>
-             )}
-           </CardContent>
-         </Card>
-       )}
-
-       <Card className="mt-4">
-         <CardHeader>
-           <CardTitle className="text-base">3. Stata / R users</CardTitle>
-         </CardHeader>
-         <CardContent className="space-y-2 text-sm text-muted-foreground">
-           <p>Export Stata .dta to CSV (STATA):</p>
-           <pre className="overflow-x-auto rounded-md bg-secondary p-3 text-xs text-foreground">
-             export delimited using "lfs_data.csv", replace
-           </pre>
-           <p>R users can use haven package:</p>
-           <pre className="overflow-x-auto rounded-md bg-secondary p-3 text-xs text-foreground">
-             write.csv(read_dta("lfs_data.dta"), "lfs_data.csv", row.names = FALSE)
-           </pre>
-         </CardContent>
-       </Card>
-
-      <div className="mt-6 text-xs text-muted-foreground">
-        Active dataset: <strong className="text-foreground">{dataset.label}</strong> · {dataset.records.length.toLocaleString()} rows
-      </div>
+            {job?.message && <div className="text-muted-foreground">{job.message}</div>}
+            {response.validation?.warnings?.length ? (
+              <Alert><AlertDescription>{response.validation.warnings.map((w, i) => <div key={i}>{w}</div>)}</AlertDescription></Alert>
+            ) : null}
+            {job?.error && <Alert variant="destructive"><AlertDescription>{job.error}</AlertDescription></Alert>}
+            {response.preview?.length ? (
+              <div className="overflow-x-auto">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Preview (first 5 rows)</div>
+                <table className="w-full text-xs">
+                  <thead><tr className="border-b">{Object.keys(response.preview[0]).slice(0, 12).map((h) => <th key={h} className="py-1 pr-2 text-left">{h}</th>)}</tr></thead>
+                  <tbody>{response.preview.map((row, i) => <tr key={i} className="border-b">{Object.keys(response.preview[0]).slice(0, 12).map((h) => <td key={h} className="py-1 pr-2">{String(row[h] ?? "")}</td>)}</tr>)}</tbody>
+                </table>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
     </AppShell>
   );
 }

@@ -1,6 +1,7 @@
 // Synthetic micro-dataset calibrated to NISR LFS Annual Reports 2020-2025.
-// Each row is a "stratum cell" carrying the weighted count for that cell.
+// Calibration/development only. Never use for official production statistics.
 import type { LfsRecord, Sex, EmploymentStatus, Area } from "./schema";
+import { IS_DEVELOPMENT_MODE } from "@/lib/env";
 
 const PROVINCES = ["Kigali City", "Southern", "Western", "Northern", "Eastern"] as const;
 
@@ -50,6 +51,7 @@ function ageFor(group: "youth" | "adult"): number {
 }
 
 export function generateSynthetic2025(): LfsRecord[] {
+  if (!IS_DEVELOPMENT_MODE) return [];
   const records: LfsRecord[] = [];
   let pid = 0;
 
